@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import axios from 'axios';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import CalendarPicker from 'react-native-calendar-picker';
-import moment from 'moment'; 
+import moment from 'moment';
 import { API_URL, useAuth } from '../context/authContext';
 
 type RootStackParamList = {
@@ -12,7 +12,7 @@ type RootStackParamList = {
 
 type EditEntryFormRouteProp = RouteProp<RootStackParamList, 'EditEntryForm'>;
 
-const EditEntryForm = () => {
+const EditEntryForm: React.FC = () => {
   const { authState } = useAuth();
   const navigation = useNavigation();
   const route = useRoute<EditEntryFormRouteProp>();
@@ -72,17 +72,17 @@ const EditEntryForm = () => {
         },
       });
 
-     alert('Journal entry updated successfully.');
+      Alert.alert('Success', 'Journal entry updated successfully.');
       navigation.goBack();
     } catch (error) {
-      //console.error('Error updating entry:', error);
-     alert('Failed to update entry. Please try again later.');
+      Alert.alert('Error', 'Failed to update entry. Please try again later.');
+      console.error('Error updating entry:', error);
     }
   };
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
-    setShowCalendar(false);
+    setShowCalendar(false); // Close calendar picker after selection
   };
 
   return (
@@ -110,9 +110,9 @@ const EditEntryForm = () => {
           selectedStartDate={selectedDate}
           initialDate={selectedDate}
           screenWidth={360}
-          minDate={new Date()}
-          allowRangeSelection={false} 
-          todayBackgroundColor="#f2e6ff" 
+          minDate={new Date()} // Optionally set minimum date
+          allowRangeSelection={false} // Disable range selection
+          todayBackgroundColor="#f2e6ff" // Customize calendar appearance
           selectedDayColor="#7300e6"
           selectedDayTextColor="#FFFFFF"
         />

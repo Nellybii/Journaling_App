@@ -1,92 +1,113 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, TextInput } from 'react-native';
 import axios from 'axios';
-import { API_URL } from '../../context/authContext';
-import { useAuth } from '../../context/authContext';
+import { API_URL, useAuth } from '../../context/authContext';
 
-interface Entry {
+interface JournalEntry {
   id: number;
   title: string;
-  date: string;
   content: string;
+  date: string;
 }
 
-const Summary = () => {
+type Period = 'daily' | 'weekly' | 'monthly';
+
+const SummaryScreen: React.FC = () => {
   const { authState } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('daily'); // Default to daily
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [period, setPeriod] = useState<Period>('daily');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
-  useEffect(() => {
-    fetchEntries(selectedPeriod);
-  }, [authState, selectedPeriod]);
-
-  const fetchEntries = async (period: string) => {
+  const fetchEntries = async () => {
     try {
-      setLoading(true);
       if (!authState?.token) {
         console.error('Token not found');
-        setLoading(false);
         return;
       }
 
-      const response = await axios.get(`${API_URL}api/journals/`, {
+      let url = `${API_URL}api/journals-summary/?period=${period}`;
+
+      if (period === 'daily' && startDate) {
+        url += `&start_date=${startDate}`;
+      } else if (period === 'weekly' && startDate && endDate) {
+        url += `&start_date=${startDate}&end_date=${endDate}`;
+      } else if (period === 'monthly' && startDate) {
+        url += `&start_date=${startDate}`;
+      }
+
+      const response = await axios.get<JournalEntry[]>(url, {
         headers: {
           Authorization: `Bearer ${authState.token}`,
         },
       });
-
       setEntries(response.data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching entries:', error);
-      setLoading(false);
+      Alert.alert('Error', 'Failed to fetch entries. Please try again later.');
     }
   };
 
-  const renderItem = ({ item }: { item: Entry }) => (
-    <TouchableOpacity onPress={() => console.log('Entry details:', item)}>
-      <View style={styles.entryContainer}>
-        <Text style={styles.entryTitle}>{item.title}</Text>
-        <Text style={styles.entryDate}>{item.date}</Text>
-        <Text style={styles.entryContent} numberOfLines={2}>{item.content}</Text>
-      </View>
-    </TouchableOpacity>
+  useEffect(() => {
+    fetchEntries();
+  }, [period, startDate, endDate]);
+
+  const renderEntryItem = ({ item }: { item: JournalEntry }) => (
+    <View style={styles.tableRow}>
+      <Text style={styles.tableCell}>{item.date}</Text>
+      <Text style={styles.tableCell}>{item.title}</Text>
+      <Text style={styles.tableCell}>{item.content}</Text>
+    </View>
   );
-
-  const handlePeriodChange = (period: string) => {
-    setSelectedPeriod(period);
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#f4511e" />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Summary</Text>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={() => setPeriod('daily')}>
+          <Text style={period === 'daily' ? styles.activeButtonText : styles.buttonText}>Daily</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => setPeriod('weekly')}>
+          <Text style={period === 'weekly' ? styles.activeButtonText : styles.buttonText}>Weekly</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => setPeriod('monthly')}>
+          <Text style={period === 'monthly' ? styles.activeButtonText : styles.buttonText}>Monthly</Text>
+        </TouchableOpacity>
+      </View>
 
-      <View style={styles.periodSelector}>
-        <TouchableOpacity onPress={() => handlePeriodChange('daily')}>
-          <Text style={[styles.periodText, selectedPeriod === 'daily' && styles.selectedPeriod]}>Daily</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePeriodChange('weekly')}>
-          <Text style={[styles.periodText, selectedPeriod === 'weekly' && styles.selectedPeriod]}>Weekly</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePeriodChange('monthly')}>
-          <Text style={[styles.periodText, selectedPeriod === 'monthly' && styles.selectedPeriod]}>Monthly</Text>
-        </TouchableOpacity>
+      {period !== 'monthly' && (
+        <View style={styles.datePickerContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter start date (YYYY-MM-DD)"
+            value={startDate}
+            onChangeText={setStartDate}
+          />
+          {period === 'weekly' && (
+            <TextInput
+              style={styles.input}
+              placeholder="Enter end date (YYYY-MM-DD)"
+              value={endDate}
+              onChangeText={setEndDate}
+            />
+          )}
+        </View>
+      )}
+
+      <View style={styles.tableHeader}>
+        <Text style={styles.tableHeaderCell}>Date</Text>
+        <Text style={styles.tableHeaderCell}>Title</Text>
+        <Text style={styles.tableHeaderCell}>Content</Text>
       </View>
 
       <FlatList
         data={entries}
-        renderItem={renderItem}
-        keyExtractor={item => item.id.toString()}
-        ListEmptyComponent={<Text>No entries found.</Text>}
+        renderItem={renderEntryItem}
+        keyExtractor={(item) => item.id.toString()}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text>No entries found</Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -96,41 +117,70 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  periodSelector: {
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  periodText: {
+  button: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  buttonText: {
     fontSize: 16,
     color: '#333',
   },
-  selectedPeriod: {
+  activeButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
     fontWeight: 'bold',
-    color: '#f4511e',
   },
-  entryContainer: {
-    padding: 10,
+  datePickerContainer: {
+    marginBottom: 10,
+  },
+  input: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingBottom: 5,
+    marginBottom: 10,
+  },
+  tableHeaderCell: {
+    flex: 1,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
-  entryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  tableCell: {
+    flex: 1,
+    textAlign: 'center',
   },
-  entryDate: {
-    fontSize: 14,
-    color: 'gray',
-  },
-  entryContent: {
-    fontSize: 16,
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
   },
 });
 
-export default Summary;
+export default SummaryScreen;

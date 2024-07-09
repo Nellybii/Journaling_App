@@ -30,12 +30,9 @@ const Login: React.FC<Props> = ({ navigation }) => {
       if (onLogin) {
         const res = await onLogin(username, password);
   
-        if (res && res.success) {
           alert('Login successful!');
           navigation.navigate('Dashboard');
-        } else {
-          alert('Login failed. Please check your credentials.');
-        }
+        
       }
     } catch (error) {
       console.error('Login error:', error);

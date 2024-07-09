@@ -58,7 +58,7 @@ const AddEntryForm: React.FC = () => {
       if (response.status === 201) {
         //console.log(response.data); 
         alert('Journal entry added successfully.');
-        navigation.goBack();
+        navigation.goBack(y);
 
       } else {
         //console.log(response.status); 
