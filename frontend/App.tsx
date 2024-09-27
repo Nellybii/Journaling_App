@@ -14,6 +14,8 @@ import Summary from './app/screens/Summary';
 import EditEntryForm from './components/EditEntryForm';
 import AddCategory from './components/AddCategoryForm';
 import CategoryScreen from './app/screens/Categories';
+import LandingPage from './app/screens/LandingPage';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +42,10 @@ const Layout = () => {
         headerTitleAlign: 'center', 
       }}
     >
+      <Stack.Screen name="LandingPage" component={LandingPage} options={{ headerShown: false }} />
+      <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
+      
+
       {authState?.authenticated ? (
         <>
           <Stack.Screen
@@ -92,7 +98,6 @@ const Layout = () => {
         </>
       ) : (
         <>
-          <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
         </>
       )}
